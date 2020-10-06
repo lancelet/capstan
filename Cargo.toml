@@ -1,9 +1,20 @@
 [package]
 name = "capstan"
-version = "0.1.0"
+version = "0.0.1"
 authors = ["Jonathan Merritt <j.s.merritt@gmail.com>"]
 edition = "2018"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+license = "MIT"
+description = "NURBS library with a CAD focus"
+homepage = "https://github.com/lancelet/capstan/"
+repository = "https://github.com/lancelet/capstan/"
+documentation = "https://docs.rs/capstan"
+keywords = ["NURBS", "graphics", "CAD"]
+categories = ["algorithms", "graphics", "mathematics"]
+readme = "README.md"
 
 [dependencies]
+alga = "0.9"
+approx = "0.3"
+nalgebra = "0.22"
+svg = "0.8"
+thiserror = "1.0"
