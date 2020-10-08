@@ -5,6 +5,22 @@ Please track all notable changes in this file. This format is based on
 
 ## [Unreleased]
 
+## [0.0.2]
+
+### Added
+
+- `ScalarT` and `VectorT` traits to represent the operations required of
+  scalars and vectors used by NURBS curves and surfaces.
+- `KnotVec` type to represent knot vectors in NURBS curves. This will later be
+  shared with NURBS surfaces.
+- `codecov.io` test coverage using `grcov`.
+- README badges for `codecov.io`, `crates.io`, `docs.rs` and the LICENSE.
+
+### Changed
+
+- `Curve` type is now parameterised by scalar and vector types.
+- Examples in `main` use `nalgebra::Vector2` instead of 3D points.
+
 ## [0.0.1]
 
 ### Added
@@ -13,5 +29,6 @@ Please track all notable changes in this file. This format is based on
 - NURBS Curve representation and evaluation using the de Boors algorithm.
 - Plot some examples for the README.
 
-[unreleased]: https://github.com/lancelet/capstan/compare/v0.0.1...HEAD
+[unreleased]: https://github.com/lancelet/capstan/compare/v0.0.2...HEAD
+[0.0.2]: https://github.com/lancelet/capstan/releases/tag/v0.0.2
 [0.0.1]: https://github.com/lancelet/capstan/releases/tag/v0.0.1

@@ -1,6 +1,10 @@
 # Capstan
 
 ![GitHub Rust CI](https://github.com/lancelet/capstan/workflows/Rust/badge.svg)
+[![Codecov.io](https://codecov.io/gh/lancelet/capstan/branch/main/graph/badge.svg)](https://codecov.io/gh/lancelet/capstan)
+[![Crates.io](https://img.shields.io/crates/v/capstan.svg)](https://crates.io/crates/capstan)
+[![Docs.rs](https://docs.rs/capstan/badge.svg)](https://docs.rs/capstan)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 NURBS utilities in Rust.
 

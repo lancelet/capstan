@@ -1,8 +1,8 @@
-name: Rust
+name: Rust Build
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, devel ]
   pull_request:
     branches: [ main ]
 
@@ -15,8 +15,24 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+
     - uses: actions/checkout@v2
-    - name: Build
+
+    - name: Install latest Rust nightly
+      uses: actions-rs/toolchain@v1
+      with:
+          toolchain: nightly
+          override: true
+          components: rustfmt, clippy
+
+    - name: Compile
       run: cargo build --verbose
-    - name: Run tests
+
+    - name: Test
       run: cargo test --verbose
+
+    - name: Rustfmt check
+      run: cargo fmt -- --check
+
+    - name: Clippy check
+      run: cargo clippy
