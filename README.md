@@ -28,4 +28,4 @@ the right and a tesselated NURBS representation on the left:
 ## NURBS Curve Representation
 
 The library uses the "Rhino" form of NURBS curves, where there are two fewer
-control points than in "traditional" NURBS.
+knots than in "traditional" NURBS.
