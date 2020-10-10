@@ -1,0 +1,7 @@
+# Re-enable branch and excl-br-line when this is released:
+#  https://github.com/actions-rs/grcov/pull/90
+
+# branch: true
+ignore-not-existing: true
+output-path: coverage
+# excl-br-line: "^\s*((debug_)?assert(_eq|_ne)?!|#\[derive\()"

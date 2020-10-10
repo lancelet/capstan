@@ -1,0 +1,54 @@
+name: Coverage
+
+on:
+  push:
+    branches: [ main, devel ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  grcov:
+    runs-on: ubuntu-latest
+
+    steps:
+
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Install Rust nightly
+      uses: actions-rs/toolchain@v1
+      with:
+          profile: minimal
+          toolchain: nightly
+          override: true
+
+    - name: Clean
+      uses: actions-rs/cargo@v1
+      with:
+        command: clean
+
+    - name: Run tests
+      uses: actions-rs/cargo@v1
+      with:
+        command: test
+        args: --all
+      env:
+        CI_GRCOV: '1'
+        CARGO_INCREMENTAL: 0
+        RUSTFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+        RUSTDOCFLAGS: '-Zprofile -Ccodegen-units=1 -Copt-level=0 -Clink-dead-code -Coverflow-checks=off -Zpanic_abort_tests -Cpanic=abort'
+
+    - name: Run grcov
+      id: grcov
+      uses: actions-rs/grcov@v0.1
+      with:
+        config: .github/actions-rs/grcov.yml
+
+    - name: Upload code coverage to codecov.io
+      uses: codecov/codecov-action@v1.0.2
+      with:
+        file: ${{steps.grcov.outputs.report}}
+        token: ${{secrets.CODECOV_TOKEN}}

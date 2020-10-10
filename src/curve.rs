@@ -1,268 +1,328 @@
-use alga::general::RealField;
-use nalgebra::geometry::Point3;
-use nalgebra::geometry::Point4;
-use nalgebra::Scalar;
+use crate::algebra::{ScalarT, VectorT};
+use crate::knotvec::KnotVec;
 use thiserror::Error;
 
 pub type Result<T> = std::result::Result<T, CurveError>;
 
+/// NURBS curve.
+///
+/// Non-Uniform Rational B-Spline.
 #[derive(PartialEq, Debug)]
-pub struct Curve<N: Scalar> {
+pub struct Curve<N, V>
+where
+    N: ScalarT,
+    V: VectorT<Field = N>,
+{
     degree: usize,
-    control_points: Vec<Point4<N>>,
-    normalized_control_points: Vec<Point4<N>>,
-    knots: Vec<N>,
+    control_points: Vec<V>,
+    weights: Vec<N>,
+    knots: KnotVec<N>,
 }
 
-impl<N: Scalar + PartialOrd + RealField> Curve<N> {
-    pub fn new(degree: usize, control_points: Vec<Point4<N>>, knots: Vec<N>) -> Result<Self> {
+impl<N, V> Curve<N, V>
+where
+    N: ScalarT,
+    V: VectorT<Field = N>,
+{
+    /// Creates a new NURBS Curve.
+    ///
+    /// The following basic properties must be satisfied for a NURBS curve:
+    /// * `degree` > 0
+    /// * `control_points.len() > degree`
+    /// * `weights.len() == control_points.len()`
+    /// * `knots.len() == degree + control_points.len() - 1`
+    /// * `knots.is_sorted()`
+    ///
+    /// This implementation of NURBS uses the "reduced knot" representation
+    /// shared with many modern CAD tools. Older representations of NURBS, such
+    /// as those in The NURBS Book, require an additional two knots. To convert
+    /// to the representation used here, simply delete the first and last knot
+    /// values (they do not contribute anything).
+    ///
+    /// Parameters:
+    ///
+    /// * `degree` - polynomial degree of the NURBS curve
+    /// * `control_points` - vector of control points
+    /// * `weights` - vector of weights (must be the same length as
+    ///               `control_points`)
+    /// * `knots` - knot vector (must have `degree + control_points.len() - 1`
+    ///             elements)
+    pub fn new(
+        degree: usize,
+        control_points: Vec<V>,
+        weights: Vec<N>,
+        knots: Vec<N>,
+    ) -> Result<Self> {
         if degree == 0 {
             Err(CurveError::InvalidDegree)
+        } else if control_points.len() <= degree {
+            Err(CurveError::InsufficientControlPoints {
+                degree,
+                number_supplied: control_points.len(),
+            })
+        } else if weights.len() != control_points.len() {
+            Err(CurveError::MismatchedWeightsAndControlPoints)
+        } else if knots.len() != degree + control_points.len() - 1 {
+            Err(CurveError::InvalidKnotCount {
+                required_knot_len: degree + control_points.len() - 1,
+                receieved_knot_len: knots.len(),
+            })
+        } else if !knots.is_sorted() {
+            Err(CurveError::InvalidKnotOrdering)
         } else {
-            let required_knot_len = degree + control_points.len() - 1;
-            if control_points.len() <= degree {
-                Err(CurveError::InsufficientControlPoints {
-                    degree,
-                    number_supplied: control_points.len() as u16,
-                })
-            } else if knots.len() != required_knot_len {
-                Err(CurveError::InvalidKnotCount {
-                    number_received: knots.len(),
-                    number_expected: required_knot_len,
-                })
-            } else if !Self::knots_ordered(&knots) {
-                Err(CurveError::InvalidKnotOrder)
-            } else {
-                let mut normalized_control_points = Vec::new();
-                for cp in &control_points {
-                    normalized_control_points.push(Point4::new(
-                        cp.coords.x * cp.coords.w,
-                        cp.coords.y * cp.coords.w,
-                        cp.coords.z * cp.coords.w,
-                        cp.coords.w,
-                    ))
-                }
-                Ok(Curve {
-                    degree,
-                    control_points,
-                    normalized_control_points,
-                    knots,
-                })
-            }
+            Ok(Curve {
+                degree,
+                control_points,
+                weights,
+                knots: KnotVec::new(knots).unwrap(),
+            })
         }
     }
 
-    pub fn de_boor(self: &Self, u: N) -> Point3<N> {
-        let p = self.degree;
+    /// Interpolates the curve at a parameter value.
+    ///
+    /// This method uses the
+    /// [de Boor algorithm](https://en.wikipedia.org/wiki/De_Boor%27s_algorithm)
+    /// to evaluate the NURBS curve at a given parameter value `u`. The de Boor
+    /// algorithm is a good choice for efficiently evaluating a NURBS curve and
+    /// is numerically stable.
+    ///
+    /// The parameter `u` is clamped to the allowed range of the parameter
+    /// space of the curve (which is the range from `self.knots().min_u()` to
+    /// `self.knots().max_u()` inclusive).
+    ///
+    /// # Parameters
+    ///
+    /// * `u` - the parameter value at which to evaluate the NURBS curve
+    pub fn de_boor(&self, u: N) -> V {
+        // clamp u and find the knot span containing u
+        let uu = self.knots.clamp(u);
+        let k = self.knots.find_span(uu);
 
-        // Construct a traditional knot vector with extra terminal knots
-        let mut ks = Vec::with_capacity(self.knots.len() + 2);
-        ks.push(self.knots[0].clone());
-        ks.append(&mut self.knots.clone());
-        ks.push(self.knots.last().unwrap().clone());
+        // populate initial triangular column
+        let mut d = Vec::<V>::with_capacity(self.degree + 1); // homogeneous points
+        let mut dw = Vec::<N>::with_capacity(self.degree + 1); // weights
+        for j in 0..self.degree + 1 {
+            // find the correct index into the control points and weights
+            // vectors, doubling-up the first and last control points
+            let i: usize = if k == self.degree - 1 && j == 0 {
+                0
+            } else {
+                j + k + 1 - self.degree
+            };
 
-        // Find minimum and maximum parameter values
-        let min_param = &ks[0];
-        let max_param = ks.last().unwrap();
-
-        // clamp u to the allowed range
-        let mut uu = u;
-        if &uu < min_param {
-            uu = min_param.clone();
-        }
-        if &uu > max_param {
-            uu = max_param.clone();
-        }
-
-        // find the index of the knot interval that contains u
-        // needs some special handling at the end of the parameter range
-        let mut k;
-        if &uu < max_param {
-            k = 0;
-            loop {
-                if ks[k] <= uu && ks[k + 1] > uu {
-                    break;
-                } else {
-                    k += 1;
-                }
-            }
-        } else {
-            k = ks.len() - 1;
-            while ks[k - 1] == ks[k] {
-                k -= 1;
-            }
-            k -= 1;
+            // multiply the control points by the corresponding weight to
+            // convert from Cartesian to homogeneous coordinates
+            d.push(self.control_points[i].clone() * self.weights[i]);
+            dw.push(self.weights[i]);
         }
 
-        // populate the initial d values
-        let mut d = Vec::new();
-        for j in 0..(p + 1) {
-            d.push(self.normalized_control_points[j + k - p].clone().coords);
-        }
+        // make extra-sure we allocated enough capacity
+        debug_assert!(d.len() <= self.degree + 1);
+        debug_assert!(dw.len() <= self.degree + 1);
 
         // main de Boor algorithm
-        for r in 1..(p + 1) {
-            for j in (r..p + 1).rev() {
-                let alpha = (uu.clone() - ks[j + k - p].clone())
-                    / (ks[j + 1 + k - r].clone() - ks[j + k - p].clone());
-                d[j] = d[j - 1] * (N::one() - alpha) + d[j] * alpha;
+        for r in 1..self.degree + 1 {
+            for j in (r..self.degree + 1).rev() {
+                let kp = self.knots[j + k - self.degree];
+                let alpha = (uu - kp) / (self.knots[1 + j + k - r] - kp);
+                let nalpha = N::one() - alpha;
+                d[j] = d[j - 1].clone() * nalpha + d[j].clone() * alpha;
+                dw[j] = dw[j - 1] * nalpha + dw[j] * alpha;
             }
         }
 
-        let p4 = d[p];
-        Point3::new(p4.x / p4.w, p4.y / p4.w, p4.z / p4.w)
+        // convert final coordinate from homogeneous to Cartesian coords
+        d[self.degree].clone() * (N::one() / dw[self.degree])
     }
 
-    pub fn control_points(self: &Self) -> &Vec<Point4<N>> {
+    /// Returns the vector of control points.
+    pub fn control_points(&self) -> &Vec<V> {
         &self.control_points
     }
 
-    pub fn min_u(self: &Self) -> &N {
-        &self.knots[0]
+    /// Returns the knot vector.
+    pub fn knots(&self) -> &KnotVec<N> {
+        &self.knots
     }
 
-    pub fn max_u(self: &Self) -> &N {
-        &self.knots.last().unwrap()
-    }
-
-    pub fn uniform_scale(self: &mut Self, scale_factor: N) {
+    /// Scale the curve by a uniform amount about the origin.
+    ///
+    /// NOTE: This method will probably be replaced by a more general
+    ///       transformation method in the future.
+    pub fn uniform_scale(&mut self, scale_factor: N) {
         for cp in &mut self.control_points {
-            cp.coords.x *= scale_factor;
-            cp.coords.y *= scale_factor;
-            cp.coords.z *= scale_factor
+            *cp = cp.clone() * scale_factor;
         }
-        for cp in &mut self.normalized_control_points {
-            cp.coords.x *= scale_factor;
-            cp.coords.y *= scale_factor;
-            cp.coords.z *= scale_factor
-        }
-    }
-
-    fn knots_ordered(knots: &[N]) -> bool {
-        let mut current_knot = &knots[0];
-        for knot in &knots[1..] {
-            if current_knot <= knot {
-                current_knot = knot;
-            } else {
-                return false;
-            }
-        }
-        return true;
     }
 }
 
 #[derive(Error, Debug, PartialEq)]
 pub enum CurveError {
-    #[error("invalid degree; must be > 0")]
+    #[error("invalid degree; must satisfy degree > 0")]
     InvalidDegree,
 
-    #[error("insufficient control points were supplied (N={}) for a curve of \
-             degree {}; at least {} are required",
+    #[error("N={} control points were supplied; at least {} are required \
+             for a degree {} curve",
             .number_supplied,
             .degree,
             .degree - 1)]
-    InsufficientControlPoints { degree: usize, number_supplied: u16 },
-
-    #[error("expected {} knot values, but received {}",
-            .number_expected,
-            .number_received)]
-    InvalidKnotCount {
-        number_received: usize,
-        number_expected: usize,
+    InsufficientControlPoints {
+        degree: usize,
+        number_supplied: usize,
     },
 
-    #[error("knots were not supplied in nondecreasing order")]
-    InvalidKnotOrder,
+    #[error("number of weights and control points must be identical")]
+    MismatchedWeightsAndControlPoints,
+
+    #[error("expected {} knot values, but received {}",
+            .required_knot_len,
+            .receieved_knot_len)]
+    InvalidKnotCount {
+        required_knot_len: usize,
+        receieved_knot_len: usize,
+    },
+
+    #[error("knots were not supplied in non-decreasing order")]
+    InvalidKnotOrdering,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use approx::assert_relative_eq;
+    use nalgebra::Vector2;
 
+    /// Test Curve
+    type TC = Curve<f32, Vector2<f32>>;
+
+    /// The degree of a NURBS curve must be >= 0.
     #[test]
     fn invalid_degree() {
-        let result = Curve::<f64>::new(0, vec![], vec![]);
+        let result = TC::new(0, vec![], vec![], vec![]);
         assert_eq!(result, Err(CurveError::InvalidDegree));
     }
 
+    /// There must be at least degree + 1 control points.
     #[test]
     fn insufficient_control_points() {
-        let result = Curve::<f64>::new(
-            3,
-            vec![
-                Point4::new(-10.0, 10.0, 0.0, 1.0),
-                Point4::new(10.0, 10.0, 0.0, 1.0),
-            ],
-            vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
-        );
+        let result = TC::new(1, vec![Vector2::new(0.0, 0.0)], vec![1.0], vec![0.0]);
         assert_eq!(
             result,
             Err(CurveError::InsufficientControlPoints {
-                degree: 3,
-                number_supplied: 2
+                degree: 1,
+                number_supplied: 1
             })
-        );
+        )
     }
 
+    /// The number of control points and weights must be identical.
+    #[test]
+    fn weights_and_cps_lengths_must_be_equal() {
+        let result = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
+            vec![1.0],
+            vec![0.0, 1.0],
+        );
+        assert_eq!(result, Err(CurveError::MismatchedWeightsAndControlPoints));
+    }
+
+    /// The correct number of knot values must be supplied.
     #[test]
     fn invalid_knot_count() {
-        let result = Curve::<f64>::new(
-            3,
-            vec![
-                Point4::new(-10.0, 10.0, 0.0, 1.0),
-                Point4::new(10.0, 10.0, 0.0, 1.0),
-                Point4::new(-10.0, -10.0, 0.0, 1.0),
-                Point4::new(10.0, -10.0, 0.0, 1.0),
-            ],
-            vec![0.0, 0.0, 1.0, 1.0],
+        let result = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
+            vec![1.0, 1.0],
+            vec![0.0],
         );
         assert_eq!(
             result,
             Err(CurveError::InvalidKnotCount {
-                number_received: 4,
-                number_expected: 6
+                required_knot_len: 2,
+                receieved_knot_len: 1
             })
         );
     }
 
+    /// Knots must be supplied in non-decreasing order.
     #[test]
-    fn invalid_knot_order() {
-        let result = Curve::<f64>::new(
-            3,
-            vec![
-                Point4::new(-10.0, 10.0, 0.0, 1.0),
-                Point4::new(10.0, 10.0, 0.0, 1.0),
-                Point4::new(-10.0, -10.0, 0.0, 1.0),
-                Point4::new(10.0, -10.0, 0.0, 1.0),
-            ],
-            vec![1.0, 1.0, 1.0, 0.0, 0.0, 0.0],
+    fn invalid_knot_ordering() {
+        let result = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
+            vec![1.0, 1.0],
+            vec![1.0, 0.0],
         );
-        assert_eq!(result, Err(CurveError::InvalidKnotOrder));
+        assert_eq!(result, Err(CurveError::InvalidKnotOrdering));
     }
 
+    /// Creating a new NURBS curve successfully.
     #[test]
-    fn de_boor_simple() {
-        let test_curve = Curve::<f64>::new(
+    fn new() {
+        let nurbs = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
+            vec![1.0, 1.0],
+            vec![0.0, 1.0],
+        )
+        .unwrap();
+        assert_eq!(nurbs.knots().min_u(), 0.0);
+        assert_eq!(nurbs.knots().max_u(), 1.0);
+        assert_eq!(
+            nurbs.control_points(),
+            &vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)]
+        );
+    }
+
+    /// Uniformly scaling a NURBS curve.
+    #[test]
+    fn uniform_scale() {
+        let mut nurbs = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
+            vec![1.0, 1.0],
+            vec![0.0, 1.0],
+        )
+        .unwrap();
+        nurbs.uniform_scale(2.0);
+
+        let expected = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0), Vector2::new(2.0 * 42.0, 2.0 * 56.0)],
+            vec![1.0, 1.0],
+            vec![0.0, 1.0],
+        )
+        .unwrap();
+
+        assert_eq!(nurbs, expected);
+    }
+
+    /// Test de Boor evalutaion on a non-rational, uniform Bezier.
+    #[test]
+    fn de_boor_non_rational_uniform_bezier() {
+        let test_curve = TC::new(
             3,
             vec![
-                Point4::new(-10.0, 10.0, 0.0, 1.0),
-                Point4::new(10.0, 10.0, 0.0, 1.0),
-                Point4::new(-10.0, -10.0, 0.0, 1.0),
-                Point4::new(10.0, -10.0, 0.0, 1.0),
+                Vector2::new(-10.0, 10.0),
+                Vector2::new(10.0, 10.0),
+                Vector2::new(-10.0, -10.0),
+                Vector2::new(10.0, -10.0),
             ],
+            vec![1.0, 1.0, 1.0, 1.0],
             vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
         )
         .unwrap();
 
         // tests for in-range parameter
-        assert_relative_eq!(Point3::new(-10.0, 10.0, 0.0), test_curve.de_boor(0.0));
-        assert_relative_eq!(Point3::new(-2.16, 7.92, 0.0), test_curve.de_boor(0.2));
-        assert_relative_eq!(Point3::new(0.0, 0.0, 0.0), test_curve.de_boor(0.5));
-        assert_relative_eq!(Point3::new(10.0, -10.0, 0.0), test_curve.de_boor(1.0));
+        assert_relative_eq!(Vector2::new(-10.0, 10.0), test_curve.de_boor(0.0));
+        assert_relative_eq!(Vector2::new(-2.16, 7.92), test_curve.de_boor(0.2));
+        assert_relative_eq!(Vector2::new(0.0, 0.0), test_curve.de_boor(0.5));
+        assert_relative_eq!(Vector2::new(10.0, -10.0), test_curve.de_boor(1.0));
 
         // tests with parameter out-of-range (clipped to parameter range)
-        assert_relative_eq!(Point3::new(-10.0, 10.0, 0.0), test_curve.de_boor(-1.0));
-        assert_relative_eq!(Point3::new(10.0, -10.0, 0.0), test_curve.de_boor(2.0));
+        assert_relative_eq!(Vector2::new(-10.0, 10.0), test_curve.de_boor(-1.0));
+        assert_relative_eq!(Vector2::new(10.0, -10.0), test_curve.de_boor(2.0));
     }
 }
