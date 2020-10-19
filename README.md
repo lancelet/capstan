@@ -25,7 +25,15 @@ the right and a tesselated NURBS representation on the left:
 
 <img src="./diagrams/cubic-bezier.svg" width="600" height="300"/>
 
+NURBS can represent multiple Bézier curve segments in a single curve. The
+example below shows an outline of the Egyptian "reed leaf" hieroglyph
+(Gardiner sign M17). This curve is constructed from 2 line segments and 4
+cubic Bézier curves, all of which can be represented as a single closed
+NURBS curve:
+
+<img src="./diagrams/reed-leaf.svg" width="300" height="300"/>
+
 ## NURBS Curve Representation
 
 The library uses the "Rhino" form of NURBS curves, where there are two fewer
-control points than in "traditional" NURBS.
+knots than in "traditional" NURBS.

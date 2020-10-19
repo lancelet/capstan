@@ -15,6 +15,22 @@ fn main() {
 
     circle_example(&String::from("circle.svg"));
     cubic_bezier_example(&String::from("cubic-bezier.svg"));
+    reed_leaf_example(&String::from("reed-leaf.svg"));
+}
+
+fn reed_leaf_example(filename: &str) {
+    let n_div = 256;
+    let nurbs_and_cp_group =
+        curve_and_control_polygon(&reed_leaf(), n_div).set("transform", "translate(-60,0)");
+    let nurbs_group = curve_path(&reed_leaf(), n_div).set("transform", "translate(90, 0)");
+
+    let document = Document::new()
+        .set("width", 300)
+        .set("height", 300)
+        .add(nurbs_and_cp_group)
+        .add(nurbs_group);
+
+    svg::save(filename, &document).unwrap();
 }
 
 fn circle_example(filename: &str) {
@@ -189,5 +205,39 @@ fn unit_circle() -> Curve {
     ];
     let weights = vec![1.0, r, 1.0, r, 1.0, r, 1.0, r, 1.0];
     let knots = vec![0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0];
+    Curve::new(degree, control_points, weights, knots).unwrap()
+}
+
+fn reed_leaf() -> Curve {
+    let degree = 3;
+    let control_points = vec![
+        Vector2::new(152.0, 18.0),
+        Vector2::new(140.0, 24.0),
+        Vector2::new(130.0, 29.0),
+        Vector2::new(121.0, 41.0),
+        Vector2::new(105.0, 65.0),
+        Vector2::new(105.0, 96.0),
+        Vector2::new(107.0, 282.0),
+        Vector2::new(107.0, 282.0),
+        Vector2::new(125.0, 277.0),
+        Vector2::new(125.0, 277.0),
+        Vector2::new(125.0, 267.0),
+        Vector2::new(123.0, 235.0),
+        Vector2::new(129.0, 230.0),
+        Vector2::new(140.0, 221.0),
+        Vector2::new(158.0, 209.0),
+        Vector2::new(173.0, 201.0),
+        Vector2::new(173.0, 201.0),
+        Vector2::new(152.0, 18.0),
+        Vector2::new(152.0, 18.0),
+    ];
+    let weights = vec![
+        1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
+        1.0,
+    ];
+    let knots = vec![
+        0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0,
+        6.0, 6.0, 6.0,
+    ];
     Curve::new(degree, control_points, weights, knots).unwrap()
 }
