@@ -54,6 +54,41 @@ impl<N: ScalarT> KnotVec<N> {
         self.knots.len()
     }
 
+    /// Checks if a knot vector is clamped.
+    ///
+    /// A knot vector is clamped if the first knot value is repeated
+    /// `degree + 1` times at the start of the knot vector (ie. its
+    /// multiplicity is `degree + 1`), and if the last knot is repeated
+    /// `degree + 1` times at the end of the knot vector.
+    ///
+    /// # Parameters
+    ///
+    /// * `degree` - degree of the NURBS curve
+    pub fn is_clamped(&self, degree: usize) -> bool {
+        if self.knots.len() < 2 * (degree + 1) {
+            false
+        } else {
+            // check the value of the start knots
+            let start_knot = self.knots[0];
+            for i_knot in &self.knots[1..degree] {
+                if *i_knot != start_knot {
+                    return false;
+                }
+            }
+
+            // check the value of the end knots
+            let end_knot = self.knots.last().unwrap();
+            for e_knot in &self.knots[self.knots.len() - degree - 1..self.knots.len() - 1] {
+                if e_knot != end_knot {
+                    return false;
+                }
+            }
+
+            // everything passed
+            true
+        }
+    }
+
     /// Checks if the knot vector is empty (always returns `false`).
     pub fn is_empty(&self) -> bool {
         false
@@ -194,6 +229,19 @@ mod tests {
         assert_eq!(knots[4], 1.0);
         assert_eq!(knots.min_u(), 0.0);
         assert_eq!(knots.max_u(), 1.0);
+    }
+
+    /// Test the is_clamped method.
+    #[test]
+    fn is_clamped() {
+        let knots1 = KnotVec::new(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap();
+        assert!(knots1.is_clamped(2));
+        assert!(!knots1.is_clamped(3));
+
+        let knots2 = KnotVec::new(vec![0.0, 0.0, 0.0, 1.0, 1.0]).unwrap();
+        assert!(knots2.is_clamped(1));
+        assert!(!knots2.is_clamped(2));
+        assert!(!knots2.is_clamped(100));
     }
 
     /// Test clamping the paramter.
