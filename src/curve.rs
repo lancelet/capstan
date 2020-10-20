@@ -30,14 +30,12 @@ where
     /// * `degree` > 0
     /// * `control_points.len() > degree`
     /// * `weights.len() == control_points.len()`
-    /// * `knots.len() == degree + control_points.len() - 1`
-    /// * `knots.is_sorted()`
+    /// * `knots.len() == degree + control_points.len() + 1`
+    /// * `knots.is_clamped()`
     ///
-    /// This implementation of NURBS uses the "reduced knot" representation
-    /// shared with many modern CAD tools. Older representations of NURBS, such
-    /// as those in The NURBS Book, require an additional two knots. To convert
-    /// to the representation used here, simply delete the first and last knot
-    /// values (they do not contribute anything).
+    /// The NURBS curves represented here are clamped (ie. they must have a
+    /// knot multiplicity at either end equal to the degree plus one).
+    /// Un-clamped curves can be converted to clamped ones via knot insertion.
     ///
     /// Parameters:
     ///
@@ -45,13 +43,13 @@ where
     /// * `control_points` - vector of control points
     /// * `weights` - vector of weights (must be the same length as
     ///               `control_points`)
-    /// * `knots` - knot vector (must have `degree + control_points.len() - 1`
+    /// * `knots` - knot vector (must have `degree + control_points.len() + 1`
     ///             elements)
     pub fn new(
         degree: usize,
         control_points: Vec<V>,
         weights: Vec<N>,
-        knots: Vec<N>,
+        knots: KnotVec<N>,
     ) -> Result<Self> {
         if degree == 0 {
             Err(CurveError::InvalidDegree)
@@ -62,19 +60,19 @@ where
             })
         } else if weights.len() != control_points.len() {
             Err(CurveError::MismatchedWeightsAndControlPoints)
-        } else if knots.len() != degree + control_points.len() - 1 {
+        } else if knots.len() != degree + control_points.len() + 1 {
             Err(CurveError::InvalidKnotCount {
-                required_knot_len: degree + control_points.len() - 1,
+                required_knot_len: degree + control_points.len() + 1,
                 receieved_knot_len: knots.len(),
             })
-        } else if !knots.is_sorted() {
-            Err(CurveError::InvalidKnotOrdering)
+        } else if !knots.is_clamped(degree) {
+            Err(CurveError::KnotVectorNotClamped)
         } else {
             Ok(Curve {
                 degree,
                 control_points,
                 weights,
-                knots: KnotVec::new(knots).unwrap(),
+                knots,
             })
         }
     }
@@ -103,13 +101,7 @@ where
         let mut d = Vec::<V>::with_capacity(self.degree + 1); // homogeneous points
         let mut dw = Vec::<N>::with_capacity(self.degree + 1); // weights
         for j in 0..self.degree + 1 {
-            // find the correct index into the control points and weights
-            // vectors, doubling-up the first and last control points
-            let i: usize = if k == self.degree - 1 && j == 0 {
-                0
-            } else {
-                j + k + 1 - self.degree
-            };
+            let i: usize = j + k - self.degree;
 
             // multiply the control points by the corresponding weight to
             // convert from Cartesian to homogeneous coordinates
@@ -183,8 +175,8 @@ pub enum CurveError {
         receieved_knot_len: usize,
     },
 
-    #[error("knots were not supplied in non-decreasing order")]
-    InvalidKnotOrdering,
+    #[error("knot vector was not clamped")]
+    KnotVectorNotClamped,
 }
 
 #[cfg(test)]
@@ -199,14 +191,19 @@ mod tests {
     /// The degree of a NURBS curve must be >= 0.
     #[test]
     fn invalid_degree() {
-        let result = TC::new(0, vec![], vec![], vec![]);
+        let result = TC::new(0, vec![], vec![], KnotVec::new(vec![0.0, 1.0]).unwrap());
         assert_eq!(result, Err(CurveError::InvalidDegree));
     }
 
     /// There must be at least degree + 1 control points.
     #[test]
     fn insufficient_control_points() {
-        let result = TC::new(1, vec![Vector2::new(0.0, 0.0)], vec![1.0], vec![0.0]);
+        let result = TC::new(
+            1,
+            vec![Vector2::new(0.0, 0.0)],
+            vec![1.0],
+            KnotVec::new(vec![0.0, 0.0, 1.0, 1.0]).unwrap(),
+        );
         assert_eq!(
             result,
             Err(CurveError::InsufficientControlPoints {
@@ -223,7 +220,7 @@ mod tests {
             1,
             vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
             vec![1.0],
-            vec![0.0, 1.0],
+            KnotVec::new(vec![0.0, 1.0]).unwrap(),
         );
         assert_eq!(result, Err(CurveError::MismatchedWeightsAndControlPoints));
     }
@@ -235,27 +232,31 @@ mod tests {
             1,
             vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
             vec![1.0, 1.0],
-            vec![0.0],
+            KnotVec::new(vec![0.0, 1.0]).unwrap(),
         );
         assert_eq!(
             result,
             Err(CurveError::InvalidKnotCount {
-                required_knot_len: 2,
-                receieved_knot_len: 1
+                required_knot_len: 4,
+                receieved_knot_len: 2
             })
         );
     }
 
-    /// Knots must be supplied in non-decreasing order.
+    /// Test that we detect a non-clamped knot vector.
     #[test]
-    fn invalid_knot_ordering() {
+    fn knot_vector_not_clamped() {
         let result = TC::new(
-            1,
-            vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
-            vec![1.0, 1.0],
-            vec![1.0, 0.0],
+            2,
+            vec![
+                Vector2::new(0.0, 0.0),
+                Vector2::new(1.0, 2.0),
+                Vector2::new(3.0, 4.0),
+            ],
+            vec![1.0, 1.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 0.5, 0.5, 0.9, 1.0]).unwrap(),
         );
-        assert_eq!(result, Err(CurveError::InvalidKnotOrdering));
+        assert_eq!(result, Err(CurveError::KnotVectorNotClamped));
     }
 
     /// Creating a new NURBS curve successfully.
@@ -265,7 +266,7 @@ mod tests {
             1,
             vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
             vec![1.0, 1.0],
-            vec![0.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 1.0, 1.0]).unwrap(),
         )
         .unwrap();
         assert_eq!(nurbs.knots().min_u(), 0.0);
@@ -283,7 +284,7 @@ mod tests {
             1,
             vec![Vector2::new(0.0, 0.0), Vector2::new(42.0, 56.0)],
             vec![1.0, 1.0],
-            vec![0.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 1.0, 1.0]).unwrap(),
         )
         .unwrap();
         nurbs.uniform_scale(2.0);
@@ -292,7 +293,7 @@ mod tests {
             1,
             vec![Vector2::new(0.0, 0.0), Vector2::new(2.0 * 42.0, 2.0 * 56.0)],
             vec![1.0, 1.0],
-            vec![0.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 1.0, 1.0]).unwrap(),
         )
         .unwrap();
 
@@ -311,7 +312,7 @@ mod tests {
                 Vector2::new(10.0, -10.0),
             ],
             vec![1.0, 1.0, 1.0, 1.0],
-            vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]).unwrap(),
         )
         .unwrap();
 

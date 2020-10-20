@@ -5,6 +5,20 @@ Please track all notable changes in this file. This format is based on
 
 ## [Unreleased]
 
+## [0.0.3]
+
+### Added
+
+- `KnotVec.is_clamped` function.
+- "Reed leaf hieroglyph" example of a curve with multiple Bézier segments.
+
+### Changed
+
+- Changed the representation to use full-multiplicity knots instead of the
+  "Rhino" style.
+- `KnotVec` is now passed to `Curve` on creation, instead of an arbitrary
+  `Vec`.
+
 ## [0.0.2]
 
 ### Added
@@ -29,6 +43,7 @@ Please track all notable changes in this file. This format is based on
 - NURBS Curve representation and evaluation using the de Boors algorithm.
 - Plot some examples for the README.
 
-[unreleased]: https://github.com/lancelet/capstan/compare/v0.0.2...HEAD
+[unreleased]: https://github.com/lancelet/capstan/compare/v0.0.3...HEAD
+[0.0.3]: https://github.com/lancelet/capstan/releases/tag/v0.0.3
 [0.0.2]: https://github.com/lancelet/capstan/releases/tag/v0.0.2
 [0.0.1]: https://github.com/lancelet/capstan/releases/tag/v0.0.1

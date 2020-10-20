@@ -8,6 +8,7 @@ use svg::node::element::Path;
 use svg::node::Node;
 use svg::Document;
 
+use capstan::knotvec::KnotVec;
 type Curve = capstan::curve::Curve<f32, Vector2<f32>>;
 
 fn main() {
@@ -74,7 +75,7 @@ fn cubic_bezier_example(filename: &str) {
                 Vector2::new(220.0, 20.0),
             ],
             vec![1.0, 1.0, 1.0, 1.0],
-            vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0],
+            KnotVec::new(vec![0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0]).unwrap(),
         )
         .unwrap(),
         256,
@@ -204,7 +205,10 @@ fn unit_circle() -> Curve {
         Vector2::new(1.0, 0.0),
     ];
     let weights = vec![1.0, r, 1.0, r, 1.0, r, 1.0, r, 1.0];
-    let knots = vec![0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0];
+    let knots = KnotVec::new(vec![
+        0.0, 0.0, 0.0, 0.25, 0.25, 0.5, 0.5, 0.75, 0.75, 1.0, 1.0, 1.0,
+    ])
+    .unwrap();
     Curve::new(degree, control_points, weights, knots).unwrap()
 }
 
@@ -235,9 +239,10 @@ fn reed_leaf() -> Curve {
         1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0,
         1.0,
     ];
-    let knots = vec![
-        0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0, 5.0,
-        6.0, 6.0, 6.0,
-    ];
+    let knots = KnotVec::new(vec![
+        0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 2.0, 2.0, 2.0, 3.0, 3.0, 3.0, 4.0, 4.0, 4.0, 5.0, 5.0,
+        5.0, 6.0, 6.0, 6.0, 6.0,
+    ])
+    .unwrap();
     Curve::new(degree, control_points, weights, knots).unwrap()
 }
