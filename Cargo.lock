@@ -75,7 +75,7 @@ name = "capstan"
 version = "0.0.3"
 dependencies = [
  "alga",
- "approx 0.3.2",
+ "approx 0.5.0",
  "nalgebra",
  "num-traits",
  "proptest",
