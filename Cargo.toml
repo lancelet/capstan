@@ -15,7 +15,7 @@ readme = "README.md"
 [dependencies]
 alga = "0.9"
 approx = "0.3"
-nalgebra = "0.22"
+nalgebra = "0.29.0"
 num-traits = "0.2"
 svg = "0.8"
 thiserror = "1.0"

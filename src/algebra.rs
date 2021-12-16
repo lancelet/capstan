@@ -1,3 +1,4 @@
+use nalgebra::{Vector1, Vector2, Vector3};
 use nalgebra::base::allocator::Allocator;
 use nalgebra::base::{DefaultAllocator, DimName, VectorN};
 use num_traits::identities::One;
@@ -46,11 +47,32 @@ pub trait VectorT:
     type Field: ScalarT;
 }
 
-impl<N, D> VectorT for VectorN<N, D>
+// impl<N, D> VectorT for VectorN<N, D>
+// where
+//     N: 'static + ScalarT,
+//     D: DimName,
+//     DefaultAllocator: Allocator<N, D>,
+// {
+//     type Field = N;
+// }
+
+impl<N> VectorT for Vector1<N>
 where
     N: 'static + ScalarT,
-    D: DimName,
-    DefaultAllocator: Allocator<N, D>,
+{
+    type Field = N;
+}
+
+impl<N> VectorT for Vector2<N>
+where
+    N: 'static + ScalarT,
+{
+    type Field = N;
+}
+
+impl<N> VectorT for Vector3<N>
+where
+    N: 'static + ScalarT,
 {
     type Field = N;
 }
