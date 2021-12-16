@@ -47,32 +47,32 @@ pub trait VectorT:
     type Field: ScalarT;
 }
 
-// impl<N, D> VectorT for VectorN<N, D>
+impl<N, D> VectorT for VectorN<N, D>
+where
+    N: 'static + ScalarT,
+    D: DimName,
+    DefaultAllocator: Allocator<N, D>,
+{
+    type Field = N;
+}
+
+// impl<N> VectorT for Vector1<N>
 // where
 //     N: 'static + ScalarT,
-//     D: DimName,
-//     DefaultAllocator: Allocator<N, D>,
 // {
 //     type Field = N;
 // }
 
-impl<N> VectorT for Vector1<N>
-where
-    N: 'static + ScalarT,
-{
-    type Field = N;
-}
+// impl<N> VectorT for Vector2<N>
+// where
+//     N: 'static + ScalarT,
+// {
+//     type Field = N;
+// }
 
-impl<N> VectorT for Vector2<N>
-where
-    N: 'static + ScalarT,
-{
-    type Field = N;
-}
-
-impl<N> VectorT for Vector3<N>
-where
-    N: 'static + ScalarT,
-{
-    type Field = N;
-}
+// impl<N> VectorT for Vector3<N>
+// where
+//     N: 'static + ScalarT,
+// {
+//     type Field = N;
+// }
