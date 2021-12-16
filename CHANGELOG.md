@@ -5,6 +5,21 @@ Please track all notable changes in this file. This format is based on
 
 ## [Unreleased]
 
+## [0.0.4]
+
+### Added
+
+- Added short circle example directly to the README as well as to a new examples folder
+
+### Changed
+
+- Bumped rust edition to 2021
+- Upgraded the Nalbegra dependency to 0.29
+- Implemented VectorT for OVector instead of VectorN as VectorN is now deprecated.
+- Moved main.rs to the examples folder
+- Moved the svg and approx to dev-dependencies as these are used in examples / testing only.
+- Edited .gitignore to ignore root level .svg artifacts generated from the example
+
 ## [0.0.3]
 
 ### Added

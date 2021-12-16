@@ -1,5 +1,6 @@
+use nalgebra::OVector;
 use nalgebra::base::allocator::Allocator;
-use nalgebra::base::{DefaultAllocator, DimName, VectorN};
+use nalgebra::base::{DefaultAllocator, DimName};
 use num_traits::identities::One;
 use std::fmt::Debug;
 use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
@@ -46,7 +47,7 @@ pub trait VectorT:
     type Field: ScalarT;
 }
 
-impl<N, D> VectorT for VectorN<N, D>
+impl<N, D> VectorT for OVector<N, D>
 where
     N: 'static + ScalarT,
     D: DimName,

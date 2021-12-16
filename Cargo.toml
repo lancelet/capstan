@@ -1,8 +1,8 @@
 [package]
 name = "capstan"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Jonathan Merritt <j.s.merritt@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "NURBS library with a CAD focus"
 homepage = "https://github.com/lancelet/capstan/"
@@ -14,11 +14,11 @@ readme = "README.md"
 
 [dependencies]
 alga = "0.9"
-approx = "0.3"
-nalgebra = "0.22"
+nalgebra = "0.29"
 num-traits = "0.2"
-svg = "0.8"
 thiserror = "1.0"
 
 [dev-dependencies]
+approx = "0.5"
+svg = "0.8"
 proptest = "0.10"
