@@ -7,6 +7,8 @@ Please track all notable changes in this file. This format is based on
 
 ## [0.0.4]
 
+General house keeping and version bumps
+
 ### Added
 
 - Mention of example in README.md
@@ -17,7 +19,7 @@ Please track all notable changes in this file. This format is based on
 - Upgraded the Nalbegra dependency to 0.29
 - Implemented VectorT for OVector instead of VectorN as VectorN is now deprecated.
 - Moved main.rs to the examples folder
-- Moved the SVG dependency to dev-dependencies so that it won't be included by default in release builds
+- Moved the svg and approx to dev-dependencies as these are used in examples and testing respectively
 - Edited .gitignore to ignore root level .svg artifacts generated from the example
 
 ## [0.0.3]
