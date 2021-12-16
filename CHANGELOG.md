@@ -5,6 +5,21 @@ Please track all notable changes in this file. This format is based on
 
 ## [Unreleased]
 
+## [0.0.4]
+
+### Added
+
+- Mention of example in README.md
+
+### Changed
+
+- Bumped rust edition to 2021
+- Upgraded the Nalbegra dependency to 0.29
+- Implemented VectorT for OVector instead of VectorN as VectorN is now deprecated.
+- Moved main.rs to the examples folder
+- Moved the SVG dependency to dev-dependencies so that it won't be included by default in release builds
+- Edited .gitignore to ignore root level .svg artifacts generated from the example
+
 ## [0.0.3]
 
 ### Added

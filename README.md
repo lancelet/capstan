@@ -37,3 +37,9 @@ NURBS curve:
 
 The library uses the "Rhino" form of NURBS curves, where there are two fewer
 knots than in "traditional" NURBS.
+
+## Example
+
+See the examples folder for how to use the library. The example uses the svg crate as a dev dependency to export a number of different svg files.
+
+cargo run --example svg_example
