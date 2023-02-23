@@ -1,8 +1,9 @@
-use nalgebra::base::allocator::Allocator;
-use nalgebra::base::{DefaultAllocator, DimName, VectorN};
+use core::{
+    fmt::Debug,
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Sub},
+};
+use nalgebra::base::{allocator::Allocator, DefaultAllocator, DimName, VectorN};
 use num_traits::identities::One;
-use std::fmt::Debug;
-use std::ops::{Add, AddAssign, Div, Mul, MulAssign, Sub};
 
 /// A scalar type.
 ///

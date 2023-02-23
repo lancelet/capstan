@@ -1,6 +1,7 @@
+use core::ops::Index;
+use is_sorted::IsSorted;
+
 use crate::algebra::ScalarT;
-use std::fmt::Debug;
-use std::ops::Index;
 
 /// Vector of knots in non-decreasing order.
 ///
@@ -30,11 +31,14 @@ impl<N: ScalarT> KnotVec<N> {
     /// # Example
     ///
     /// ```
-    /// # use capstan::knotvec::KnotVec;
+    /// # use capstan::KnotVec;
     /// let knots = KnotVec::new(vec![0.0, 0.0, 0.0, 1.0, 1.0, 1.0]).unwrap();
     /// ```
     pub fn new(knots: Vec<N>) -> Option<Self> {
-        if knots.len() >= 2 && knots.is_sorted() && &knots[0] != knots.last().unwrap() {
+        if knots.len() >= 2
+            && IsSorted::is_sorted(&mut knots.iter())
+            && &knots[0] != knots.last().unwrap()
+        {
             Some(KnotVec { knots })
         } else {
             None
@@ -46,7 +50,7 @@ impl<N: ScalarT> KnotVec<N> {
     /// # Example
     ///
     /// ```
-    /// # use capstan::knotvec::KnotVec;
+    /// # use capstan::KnotVec;
     /// let knots = KnotVec::new(vec![0.0, 0.0, 1.0, 1.0]).unwrap();
     /// assert_eq!(knots.len(), 4);
     /// ```
@@ -145,7 +149,7 @@ impl<N: ScalarT> KnotVec<N> {
     /// # Examples
     ///
     /// ```
-    /// # use capstan::knotvec::KnotVec;
+    /// # use capstan::KnotVec;
     /// let knots = KnotVec::new(vec![0.0, 0.0, 0.5, 1.0, 1.0]).unwrap();
     /// assert_eq!(knots.find_span(0.0), 1);
     /// assert_eq!(knots.find_span(0.6), 2);

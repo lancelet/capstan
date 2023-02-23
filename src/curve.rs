@@ -1,8 +1,8 @@
 use crate::algebra::{ScalarT, VectorT};
 use crate::knotvec::KnotVec;
-use thiserror::Error;
+use thiserror_no_std::Error;
 
-pub type Result<T> = std::result::Result<T, CurveError>;
+pub type Result<T> = core::result::Result<T, CurveError>;
 
 /// NURBS curve.
 ///
@@ -42,9 +42,9 @@ where
     /// * `degree` - polynomial degree of the NURBS curve
     /// * `control_points` - vector of control points
     /// * `weights` - vector of weights (must be the same length as
-    ///               `control_points`)
+    ///   `control_points`)
     /// * `knots` - knot vector (must have `degree + control_points.len() + 1`
-    ///             elements)
+    ///   elements)
     pub fn new(
         degree: usize,
         control_points: Vec<V>,
