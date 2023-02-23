@@ -1,24 +1,29 @@
 [package]
 name = "capstan"
-version = "0.0.3"
+version = "0.0.4"
 authors = ["Jonathan Merritt <j.s.merritt@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT"
 description = "NURBS library with a CAD focus"
 homepage = "https://github.com/lancelet/capstan/"
 repository = "https://github.com/lancelet/capstan/"
 documentation = "https://docs.rs/capstan"
-keywords = ["NURBS", "graphics", "CAD"]
-categories = ["algorithms", "graphics", "mathematics"]
+keywords = ["NURBS", "graphics", "CAD", "splines", "curves"]
+categories = ["algorithms", "graphics", "mathematics", "multimedia"]
 readme = "README.md"
 
 [dependencies]
 alga = "0.9"
-approx = "0.3"
-nalgebra = "0.22"
+approx = "0.5"
+is_sorted = { version = "0.1" }
+nalgebra = "0.32"
 num-traits = "0.2"
-svg = "0.8"
-thiserror = "1.0"
+thiserror-no-std = "2.0"
 
 [dev-dependencies]
-proptest = "0.10"
+proptest = "1.1.0"
+svg = "0.13.0"
+
+[features]
+default = []
+unstable = ["is_sorted/unstable"]

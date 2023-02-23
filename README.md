@@ -1,4 +1,4 @@
-# Capstan
+# `capstan`
 
 ![GitHub Rust CI](https://github.com/lancelet/capstan/workflows/Rust/badge.svg)
 [![Codecov.io](https://codecov.io/gh/lancelet/capstan/branch/main/graph/badge.svg)](https://codecov.io/gh/lancelet/capstan)

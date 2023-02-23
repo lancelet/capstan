@@ -1,15 +1,14 @@
-extern crate svg;
-
 use nalgebra::Vector2;
-use svg::node::element::path;
-use svg::node::element::Circle;
-use svg::node::element::Group;
-use svg::node::element::Path;
-use svg::node::Node;
-use svg::Document;
+use svg::{
+    node::{
+        element::{path, Circle, Group, Path},
+        Node,
+    },
+    Document,
+};
 
-use capstan::knotvec::KnotVec;
-type Curve = capstan::curve::Curve<f32, Vector2<f32>>;
+use capstan::KnotVec;
+type Curve = capstan::Curve<f32, Vector2<f32>>;
 
 fn main() {
     println!("Plotting some examples");
@@ -38,6 +37,7 @@ fn circle_example(filename: &str) {
     let radius = 130.0;
 
     let mut nurbs_circle = unit_circle();
+    eprintln!("{:?}", nurbs_circle.de_boor(0.5));
     nurbs_circle.uniform_scale(radius);
     let nurbs_group =
         curve_and_control_polygon(&nurbs_circle, 256).set("transform", "translate(150, 150)");
